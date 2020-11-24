@@ -115,6 +115,7 @@ func (pe *projectionEliminator) optimize(ctx context.Context, lp LogicalPlan) (L
 	return root, nil
 }
 
+//TODO 投影消除
 // eliminate eliminates the redundant projection in a logical plan.
 func (pe *projectionEliminator) eliminate(p LogicalPlan, replace map[string]*expression.Column, canEliminate bool) LogicalPlan {
 	proj, isProj := p.(*LogicalProjection)

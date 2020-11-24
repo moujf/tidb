@@ -726,6 +726,7 @@ func (b *executorBuilder) buildSetConfig(v *plannercore.SetConfig) Executor {
 	}
 }
 
+//TODO 首先 plan.Insert 在这里被转成 executor.InsertExec 结构
 func (b *executorBuilder) buildInsert(v *plannercore.Insert) Executor {
 	if v.SelectPlan != nil {
 		// Try to update the forUpdateTS for insert/replace into select statements.

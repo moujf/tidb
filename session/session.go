@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/pingcap/tidb/src/github.com/opentracing/opentracing-go"
 	"net"
 	"runtime/trace"
 	"strconv"
@@ -1084,6 +1085,7 @@ func (s *session) ParseSQL(ctx context.Context, sql, charset, collation string) 
 	defer trace.StartRegion(ctx, "ParseSQL").End()
 	s.parser.SetSQLMode(s.sessionVars.SQLMode)
 	s.parser.SetParserConfig(s.sessionVars.BuildParserConfig())
+	//TODO 这两个组件共同构成了 Parser 模块，调用 Parser，可以将文本解析成结构化数据，也就是抽象语法树 （AST）：
 	return s.parser.Parse(sql, charset, collation)
 }
 
@@ -1214,6 +1216,7 @@ func (s *session) ExecuteStmt(ctx context.Context, stmtNode ast.StmtNode) (sqlex
 
 	// Transform abstract syntax tree to a physical plan(stored in executor.ExecStmt).
 	compiler := executor.Compiler{Ctx: s}
+	//TODO 拿到 AST 之后，就可以做各种验证、变化、优化，这一系列动作的入口在这里：
 	stmt, err := compiler.Compile(ctx, stmtNode)
 	if err != nil {
 		s.rollbackOnError(ctx)

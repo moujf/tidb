@@ -1451,6 +1451,7 @@ func (s *LogicalIndexScan) GetPhysicalIndexScan(schema *expression.Schema, stats
 	return is
 }
 
+//TODO 这个方法会构建出 PhysicalTableScan，并且调用 addPushDownSelection() 方法，将一个 PhysicalSelection 加到 PhysicalTableScan 之上，一起放进 copTask 中。
 // convertToTableScan converts the DataSource to table scan.
 func (ds *DataSource) convertToTableScan(prop *property.PhysicalProperty, candidate *candidatePath) (task task, err error) {
 	// It will be handled in convertToIndexScan.

@@ -16,6 +16,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"github.com/pingcap/tidb/src/github.com/opentracing/opentracing-go"
 	"math"
 	"runtime/trace"
 	"strconv"
@@ -314,6 +315,7 @@ func (a *ExecStmt) Exec(ctx context.Context) (_ sqlexec.RecordSet, err error) {
 		sctx.GetSessionVars().StmtCtx.MemTracker.SetBytesLimit(sctx.GetSessionVars().StmtCtx.MemQuotaQuery)
 	}
 
+	//TODO 在这个过程中，会将 plan 转换成 executor，执行引擎即可通过 executor 执行之前定下的查询计划
 	e, err := a.buildExecutor()
 	if err != nil {
 		return nil, err
@@ -363,6 +365,8 @@ func (a *ExecStmt) Exec(ctx context.Context) (_ sqlexec.RecordSet, err error) {
 	if txn.Valid() {
 		txnStartTS = txn.StartTS()
 	}
+
+	//TODO 生成执行器之后，被封装在一个 recordSet 结构中：
 	return &recordSet{
 		executor:   e,
 		stmt:       a,
@@ -706,6 +710,7 @@ type pessimisticTxn interface {
 	KeysNeedToLock() ([]kv.Key, error)
 }
 
+//TODO 在这个过程中，会将 plan 转换成 executor，执行引擎即可通过 executor 执行之前定下的查询计划
 // buildExecutor build a executor from plan, prepared statement may need additional procedure.
 func (a *ExecStmt) buildExecutor() (Executor, error) {
 	ctx := a.Ctx

@@ -25,6 +25,8 @@ import (
 	"github.com/pingcap/tidb/types"
 )
 
+//TODO 列裁剪的算法实现是自顶向下地把算子过一遍。某个节点需要用到的列，等于它自己需要用到的列，加上它的父节点需要用到的列。可以发现，由上往下的节点，需要用到的列将越来越多。
+
 type columnPruner struct {
 }
 

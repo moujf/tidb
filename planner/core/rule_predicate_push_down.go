@@ -23,6 +23,8 @@ import (
 	"github.com/pingcap/tidb/types"
 )
 
+//TODO 谓词下推
+
 type ppdSolver struct{}
 
 func (s *ppdSolver) optimize(ctx context.Context, lp LogicalPlan) (LogicalPlan, error) {

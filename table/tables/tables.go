@@ -701,8 +701,10 @@ func (t *TableCommon) AddRecord(sctx sessionctx.Context, r []types.Datum, opts .
 
 	writeBufs := sessVars.GetWriteStmtBufs()
 	adjustRowValuesBuf(writeBufs, len(row))
+	//TODO 构造 Row Key:
 	key := t.RecordKey(recordID)
 	sc, rd := sessVars.StmtCtx, &sessVars.RowEncoder
+	//TODO 构造 Row Value:
 	writeBufs.RowValBuf, err = tablecodec.EncodeRow(sc, row, colIDs, writeBufs.RowValBuf, writeBufs.AddRowValues, rd)
 	if err != nil {
 		return nil, err
@@ -807,6 +809,7 @@ func (t *TableCommon) genIndexKeyStr(colVals []types.Datum) (string, error) {
 	return strings.Join(strVals, "-"), nil
 }
 
+//TODO 构造 Index 数据的代码在 addIndices() 函数中，会调用 index.Create() 这个方法：
 // addIndices adds data into indices. If any key is duplicated, returns the original handle.
 func (t *TableCommon) addIndices(sctx sessionctx.Context, recordID kv.Handle, r []types.Datum, txn kv.Transaction, opts []table.CreateIdxOptFunc) (kv.Handle, error) {
 	writeBufs := sctx.GetSessionVars().GetWriteStmtBufs()

@@ -149,6 +149,7 @@ type LogicalPlan interface {
 	// Because it might change the root if the having clause exists, we need to return a plan that represents a new root.
 	PredicatePushDown([]expression.Expression) ([]expression.Expression, LogicalPlan)
 
+	//TODO 各个算子都是实现 PruneColumns 接口
 	// PruneColumns prunes the unused columns.
 	PruneColumns([]*expression.Column) error
 

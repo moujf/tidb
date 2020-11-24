@@ -2246,7 +2246,9 @@ func (b *PlanBuilder) resolveGeneratedColumns(ctx context.Context, columns []*ta
 	return igc, nil
 }
 
+//TODO 对于insert语句 将 AST 转成 Plan 结构
 func (b *PlanBuilder) buildInsert(ctx context.Context, insert *ast.InsertStmt) (Plan, error) {
+	//TODO 补全 Schema 信息 包括 Database/Table/Column 信息，这个语句没有指定向哪些列插入数据，所以会使用所有的列。
 	ts, ok := insert.Table.TableRefs.Left.(*ast.TableSource)
 	if !ok {
 		return nil, infoschema.ErrTableNotExists.GenWithStackByArgs()
@@ -2336,6 +2338,7 @@ func (b *PlanBuilder) buildInsert(ctx context.Context, insert *ast.InsertStmt) (
 		}
 	} else if len(insert.Lists) > 0 {
 		// Branch for `INSERT ... VALUES ...`.
+		//TODO 处理 Lists 中的数据
 		err := b.buildValuesListOfInsert(ctx, insert, insertPlan, mockTablePlan, checkRefColumn)
 		if err != nil {
 			return nil, err
@@ -2367,6 +2370,7 @@ func (b *PlanBuilder) buildInsert(ctx context.Context, insert *ast.InsertStmt) (
 	}
 
 	err = insertPlan.ResolveIndices()
+	//现在 ast.InsertStmt 已经被转换成为 plan.Insert 结构
 	return insertPlan, err
 }
 

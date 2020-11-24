@@ -15,6 +15,7 @@ package distsql
 
 import (
 	"context"
+	"github.com/pingcap/tidb/src/github.com/opentracing/opentracing-go"
 	"unsafe"
 
 	"github.com/opentracing/opentracing-go"
@@ -53,6 +54,7 @@ func DispatchMPPTasks(ctx context.Context, sctx sessionctx.Context, tasks []*kv.
 
 }
 
+//TODO 最重要的方法是 SelectDAG 这个函数
 // Select sends a DAG request, returns SelectResult.
 // In kvReq, KeyRanges is required, Concurrency/KeepOrder/Desc/IsolationLevel/Priority are optional.
 func Select(ctx context.Context, sctx sessionctx.Context, kvReq *kv.Request, fieldTypes []*types.FieldType, fb *statistics.QueryFeedback) (SelectResult, error) {
@@ -70,6 +72,8 @@ func Select(ctx context.Context, sctx sessionctx.Context, kvReq *kv.Request, fie
 	if !sctx.GetSessionVars().EnableStreaming {
 		kvReq.Streaming = false
 	}
+	//TODO kvReq 中包含了计算所涉及的数据的 KeyRanges
+	//TODO 这里通过 TiKV Client 向 TiKV 集群发送计算请求
 	resp := sctx.GetClient().Send(ctx, kvReq, sctx.GetSessionVars().KVVars, sctx.GetSessionVars().StmtCtx.MemTracker)
 	if resp == nil {
 		err := errors.New("client returns nil response")
@@ -100,6 +104,8 @@ func Select(ctx context.Context, sctx sessionctx.Context, kvReq *kv.Request, fie
 	if canUseChunkRPC(sctx) {
 		encodetype = tipb.EncodeType_TypeChunk
 	}
+	// 这里将结果进行了封装
+	//selectResult 实现了 SelectResult 这个接口，代表了一次查询的所有结果的抽象，计算是以 Region 为单位进行，所以这里全部结果会包含所有涉及到的 Region 的结果。调用 Chunk 方法可以读到一个 Chunk 的数据，通过不断调用 NextChunk 方法，直到 Chunk 的 NumRows 返回 0 就能拿到所有结果。NextChunk 的实现会不断获取每个 Region 返回的 SelectResponse，把结果写入 Chunk。
 	return &selectResult{
 		label:      "dag",
 		resp:       resp,

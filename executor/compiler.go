@@ -15,6 +15,7 @@ package executor
 
 import (
 	"context"
+	"github.com/pingcap/tidb/src/github.com/opentracing/opentracing-go"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/pingcap/parser/ast"
@@ -54,11 +55,13 @@ func (c *Compiler) Compile(ctx context.Context, stmtNode ast.StmtNode) (*ExecStm
 	}
 
 	infoSchema := infoschema.GetInfoSchema(c.Ctx)
+	//TODO plan.Preprocess: 做一些合法性检查以及名字绑定；
 	if err := plannercore.Preprocess(c.Ctx, stmtNode, infoSchema); err != nil {
 		return nil, err
 	}
 	stmtNode = plannercore.TryAddExtraLimit(c.Ctx, stmtNode)
 
+	//TODO plan.Optimize：制定查询计划，并优化，这个是最核心的步骤之一，后面的文章会重点介绍；
 	finalPlan, names, err := planner.Optimize(ctx, c.Ctx, stmtNode, infoSchema)
 	if err != nil {
 		return nil, err
@@ -69,6 +72,7 @@ func (c *Compiler) Compile(ctx context.Context, stmtNode ast.StmtNode) (*ExecStm
 	if c.Ctx.GetSessionVars().StmtCtx.Priority == mysql.NoPriority {
 		lowerPriority = needLowerPriority(finalPlan)
 	}
+	//TODO 构造 executor.ExecStmt 结构：这个 ExecStmt 结构持有查询计划，是后续执行的基础，非常重要，特别是 Exec 这个方法。
 	return &ExecStmt{
 		GoCtx:         ctx,
 		InfoSchema:    infoSchema,

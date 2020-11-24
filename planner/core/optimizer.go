@@ -56,6 +56,7 @@ const (
 	flagPrunColumnsAgain
 )
 
+//TODO 目前 TiDB 已经支持下列优化规则
 var optRuleList = []logicalOptRule{
 	&gcSubstituter{},
 	&columnPruner{},
@@ -125,6 +126,7 @@ func DoOptimize(ctx context.Context, sctx sessionctx.Context, flag uint64, logic
 	if flag&flagPrunColumns > 0 && flag-flagPrunColumns > flagPrunColumns {
 		flag |= flagPrunColumnsAgain
 	}
+	//TODO 逻辑优化
 	logic, err := logicalOptimize(ctx, flag, logic)
 	if err != nil {
 		return nil, 0, err
@@ -136,6 +138,7 @@ func DoOptimize(ctx context.Context, sctx sessionctx.Context, flag uint64, logic
 	if planCounter == 0 {
 		planCounter = -1
 	}
+	//TODO 物理优化
 	physical, cost, err := physicalOptimize(logic, &planCounter)
 	if err != nil {
 		return nil, 0, err
@@ -217,6 +220,7 @@ func physicalOptimize(logic LogicalPlan, planCounter *PlanCounterTp) (PhysicalPl
 	}
 
 	logic.SCtx().GetSessionVars().StmtCtx.TaskMapBakTS = 0
+	//TODO 选择代价最小的方案
 	t, _, err := logic.findBestTask(prop, planCounter)
 	if err != nil {
 		return nil, 0, err

@@ -717,6 +717,7 @@ func (cc *clientConn) PeerHost(hasPassword string) (host string, err error) {
 // Run reads client query and writes query result to client in for loop, if there is a panic during query handling,
 // it will be recovered and log the panic error.
 // This function returns and the connection is closed if there is an IO error or there is a panic.
+//TODO 当和客户端的连接建立好之后，TiDB 中会有一个 Goroutine 监听端口，等待从客户端发来的包，并对发来的包做处理。
 func (cc *clientConn) Run(ctx context.Context) {
 	const size = 4096
 	defer func() {
@@ -754,6 +755,7 @@ func (cc *clientConn) Run(ctx context.Context) {
 		waitTimeout := cc.getSessionVarsWaitTimeout(ctx)
 		cc.pkt.setReadTimeout(time.Duration(waitTimeout) * time.Second)
 		start := time.Now()
+		//TODO 在一个循环中，不断的读取网络包
 		data, err := cc.readPacket()
 		if err != nil {
 			if terror.ErrorNotEqual(err, io.EOF) {
@@ -781,6 +783,7 @@ func (cc *clientConn) Run(ctx context.Context) {
 		}
 
 		startTime := time.Now()
+		//TODO 然后调用 dispatch() 方法处理收到的请求
 		if err = cc.dispatch(ctx, data); err != nil {
 			if terror.ErrorEqual(err, io.EOF) {
 				cc.addMetrics(data[0], startTime, nil)
@@ -918,6 +921,7 @@ func (cc *clientConn) addMetrics(cmd byte, startTime time.Time, err error) {
 // dispatch handles client request based on command which is the first byte of the data.
 // It also gets a token from server which is used to limit the concurrently handling clients.
 // The most frequently used command is ComQuery.
+//TODO 这里要处理的包是原始 byte 数组，里面的内容读者可以参考 MySQL 协议
 func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 	defer func() {
 		// reset killed for each request
@@ -934,6 +938,7 @@ func (cc *clientConn) dispatch(ctx context.Context, data []byte) error {
 
 	t := time.Now()
 	cc.lastPacket = data
+//TODO 第一个 byte 即为 Command 的类型
 	cmd := data[0]
 	data = data[1:]
 	if variable.EnablePProfSQLCPU.Load() {
@@ -1389,6 +1394,7 @@ func (cc *clientConn) handleIndexAdvise(ctx context.Context, indexAdviseInfo *ex
 // As the execution time of this function represents the performance of TiDB, we do time log and metrics here.
 // There is a special query `load data` that does not return result, which is handled differently.
 // Query `load stats` does not return result either.
+//TODO 然后根据 Command 的类型，调用对应的处理函数，最常用的 Command 是 COM_QUERY，对于大多数 SQL 语句，只要不是用 Prepared 方式，都是 COM_QUERY，本文也只会介绍这个 Command，其他的 Command 请读者对照 MySQL 文档看代码。 对于 Command Query，从客户端发送来的主要是 SQL 文本，处理函数是 handleQuery():
 func (cc *clientConn) handleQuery(ctx context.Context, sql string) (err error) {
 	defer trace.StartRegion(ctx, "handleQuery").End()
 	sc := cc.ctx.GetSessionVars().StmtCtx
@@ -1433,6 +1439,9 @@ func (cc *clientConn) handleQuery(ctx context.Context, sql string) (err error) {
 			// Save the point plan in Session so we don't need to build the point plan again.
 			cc.ctx.SetValue(plannercore.PointPlanKey, plannercore.PointPlanVal{Plan: pointPlans[i]})
 		}
+		//TODO 这个函数会调用具体的执行逻辑：
+		//https://pingcap.com/blog-cn/tidb-source-code-reading-3/
+		//这里有所不同
 		err = cc.handleStmt(ctx, stmt, parserWarns, i == len(stmts)-1)
 		if err != nil {
 			break
@@ -1541,6 +1550,7 @@ func (cc *clientConn) prefetchPointPlanKeys(ctx context.Context, stmts []ast.Stm
 func (cc *clientConn) handleStmt(ctx context.Context, stmt ast.StmtNode, warns []stmtctx.SQLWarn, lastStmt bool) error {
 	ctx = context.WithValue(ctx, execdetails.StmtExecDetailKey, &execdetails.StmtExecDetails{})
 	reg := trace.StartRegion(ctx, "ExecuteStmt")
+	//TODO 这个函数会调用具体的执行逻辑：
 	rs, err := cc.ctx.ExecuteStmt(ctx, stmt)
 	reg.End()
 	// The session tracker detachment from global tracker is solved in the `rs.Close` in most cases.
@@ -1566,7 +1576,7 @@ func (cc *clientConn) handleStmt(ctx context.Context, stmt ast.StmtNode, warns [
 		if connStatus == connStatusShutdown || connStatus == connStatusWaitShutdown {
 			return executor.ErrQueryInterrupted
 		}
-
+		//TODO 经过一系列处理，拿到 SQL 语句的结果后会调用 writeResultset 方法把结果写回客户端：
 		err = cc.writeResultset(ctx, rs, false, status, 0)
 		if err != nil {
 			return err
